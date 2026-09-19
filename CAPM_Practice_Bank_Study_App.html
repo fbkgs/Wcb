@@ -69,6 +69,39 @@ details{border:1px solid var(--border);border-radius:12px;margin-top:10px;backgr
 @media(max-width:1100px){.study-layout{grid-template-columns:250px minmax(0,1fr)}.study-side{display:none}.hero-stats{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:780px){.topbar-inner{padding:10px 12px;flex-wrap:wrap}.brand-sub{display:none}.nav{order:3;width:100%;overflow:auto;margin:0}.nav button{flex:1;white-space:nowrap}.main{padding:15px 12px 48px}.hero{padding:21px}.hero-stats{grid-template-columns:1fr 1fr}.study-layout{display:block}.filters{position:relative;top:auto;margin-bottom:12px}.filters.collapsed .filter-body{display:none}.q-card{padding:18px}.q-text{font-size:18px}.setup-grid,.analytics-grid,.two-col{grid-template-columns:1fr}.domain-row{grid-template-columns:1fr 70px}.domain-row .bar{grid-column:1/-1}.top-actions .btn{display:none}}
 @media(max-width:480px){.hero-stats{grid-template-columns:1fr 1fr}.stat strong{font-size:18px}.q-footer{flex-wrap:wrap}.q-footer .center{order:3;width:100%;text-align:center}.option{grid-template-columns:28px 1fr;padding:12px}.brand-title{font-size:14px}}
+
+/* Focus mode: distraction-reduced Study view with larger reading type */
+#focusBtn[aria-pressed="true"]{background:var(--primary-soft);color:var(--primary);border-color:color-mix(in srgb,var(--primary) 35%,var(--border))}
+body.focus-mode #hero{display:none!important}
+body.focus-mode #study .filters{display:none!important}
+body.focus-mode #study .study-layout{grid-template-columns:minmax(0,1fr) 260px;max-width:1240px;margin:0 auto;gap:22px}
+body.focus-mode #study .q-card{padding:clamp(28px,4vw,44px)}
+body.focus-mode #study .q-text{font-size:clamp(26px,2.35vw,34px);line-height:1.4;letter-spacing:-.025em;margin:10px 0 26px}
+body.focus-mode #study .q-id{font-size:13px}
+body.focus-mode #study .q-meta{margin-bottom:18px;gap:8px}
+body.focus-mode #study .q-meta .badge{font-size:12px;padding:6px 9px}
+body.focus-mode #study .options{gap:13px}
+body.focus-mode #study .option{font-size:clamp(18px,1.45vw,21px);line-height:1.5;padding:18px 20px;grid-template-columns:40px 1fr;gap:14px;border-radius:16px}
+body.focus-mode #study .option-key{width:36px;height:36px;border-radius:10px;font-size:14px}
+body.focus-mode #study .feedback{margin-top:24px;padding-top:24px}
+body.focus-mode #study .feedback-head{font-size:19px}
+body.focus-mode #study .feedback p,
+body.focus-mode #study .takeaway{font-size:17px;line-height:1.68}
+body.focus-mode #study summary{font-size:16px;padding:14px 16px}
+body.focus-mode #study .detail-body{font-size:16px;line-height:1.65;padding:0 16px 16px}
+body.focus-mode #study .q-footer{margin-top:22px}
+body.focus-mode #study .q-footer .center{font-size:13px}
+@media(max-width:1050px){
+  body.focus-mode #study .study-layout{grid-template-columns:minmax(0,1fr)}
+  body.focus-mode #study .study-side{display:none}
+}
+@media(max-width:650px){
+  body.focus-mode .main{padding-top:14px}
+  body.focus-mode #study .q-card{padding:22px 18px}
+  body.focus-mode #study .q-text{font-size:24px}
+  body.focus-mode #study .option{font-size:18px;padding:16px}
+}
+
 @media print{.topbar,.filters,.study-side,.q-footer,.hero,.toast{display:none!important}.main{padding:0}.study-layout{display:block}.panel{box-shadow:none;border:0}.q-card{padding:0}}
 </style>
 </head>
@@ -87,6 +120,7 @@ details{border:1px solid var(--border);border-radius:12px;margin-top:10px;backgr
         <button data-view="about">Sources & Method</button>
       </nav>
       <div class="top-actions" style="display:flex;gap:7px">
+        <button class="btn secondary" id="focusBtn" aria-pressed="false" title="Toggle distraction-reduced Study view">Focus</button>
         <button class="icon-btn" id="themeBtn" aria-label="Toggle theme" title="Toggle theme">◐</button>
         <button class="btn secondary" id="downloadBtn">Download JSON</button>
       </div>
@@ -170,6 +204,7 @@ const qs=bank.questions||[];
 const letters=['A','B','C','D'];
 const LS_KEY='capm-practice-progress-v2';
 const THEME_KEY='capm-theme-v1';
+const FOCUS_KEY='capm-focus-mode-v1';
 let state={answers:{},bookmarks:[],studyIndex:0};
 try{state={...state,...JSON.parse(localStorage.getItem(LS_KEY)||'{}')}}catch(e){}
 state.answers=state.answers||{}; state.bookmarks=Array.isArray(state.bookmarks)?state.bookmarks:[];
@@ -190,6 +225,21 @@ function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show'
 function initTheme(){const stored=localStorage.getItem(THEME_KEY);if(stored)document.documentElement.dataset.theme=stored;else if(matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.dataset.theme='dark'}
 initTheme();
 $('#themeBtn').onclick=()=>{const n=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=n;localStorage.setItem(THEME_KEY,n)};
+
+function setFocusMode(on,{persist=true}={}){
+ document.body.classList.toggle('focus-mode',on);
+ const b=$('#focusBtn');
+ if(b){b.setAttribute('aria-pressed',on?'true':'false');b.textContent=on?'Exit Focus':'Focus'}
+ if(persist)localStorage.setItem(FOCUS_KEY,on?'true':'false');
+}
+setFocusMode(localStorage.getItem(FOCUS_KEY)==='true',{persist:false});
+$('#focusBtn').onclick=()=>{
+ const next=!document.body.classList.contains('focus-mode');
+ if(next&&currentView!=='study')switchView('study');
+ setFocusMode(next);
+ window.scrollTo({top:0,behavior:'smooth'});
+};
+
 
 function renderHero(){
  const m=bank.review_metadata||{}, bp=m.exam_blueprint_used||{};
